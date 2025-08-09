@@ -29,8 +29,11 @@
       .lang-switch button.active { border-color: var(--primary); outline: 2px solid var(--ring); }
 
       .container { display: grid; grid-template-columns: 520px 1fr; gap: 24px; }
-      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
-      .board-wrap { position: relative; width: 500px; height: 500px; padding: 10px; }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); position: relative; }
+      .board-wrap { position: relative; width: 500px; height: 500px; padding: 0; }
+      /* 让棋盘卡片与棋盘内容同一定位上下文，阴影不影响内部测量 */
+      .grid.card { padding: 10px; }
+      .grid.card, .panel.card { overflow: visible; }
       .board { width: 500px; height: 500px; position: relative; border-radius: 10px; overflow: hidden; }
       .panel { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
       .badges { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -50,7 +53,7 @@
       .board .cg-wrap { border: 0 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box; }
       .board .cg-board { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; border: 0 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box; }
       /* 确保 cg-container 是定位上下文，使 overlay 绝对定位贴合其实际 496×496 尺寸 */
-      .board cg-container { display: block; position: relative !important; }
+      .board cg-container { display: block; position: relative !important; width: 100% !important; height: 100% !important; border: 0 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box; }
       .overlay-cell { position:absolute; box-sizing:border-box; }
       .heat { background: rgba(255,0,0,var(--alpha)); }
       .heat-blue { background: rgba(0,120,255,var(--alpha)); }
@@ -341,20 +344,21 @@
         const isWhitePerspective = myColor === 'w';
 
         // 以像素对齐，避免百分比累计舍入误差
-        const container = el.querySelector('cg-container');
-        const rect = container ? container.getBoundingClientRect() : overlay.getBoundingClientRect();
-        const W = Math.round(rect.width);
-        const H = Math.round(rect.height);
-        const probedW = 0;
-        const probedH = 0;
-        const cellW = probedW > 0 ? probedW : Math.floor(W / 8);
-        const cellH = probedH > 0 ? probedH : Math.floor(H / 8);
-        const innerW = cellW * 8;
-        const innerH = cellH * 8;
-        const offsetX = Math.round((W - innerW) / 2);
-        const offsetY = Math.round((H - innerH) / 2);
-        const x = Array.from({ length: 9 }, (_, i) => i < 8 ? offsetX + i * cellW : offsetX + innerW);
-        const y = Array.from({ length: 9 }, (_, i) => i < 8 ? offsetY + i * cellH : offsetY + innerH);
+        // 为确保与 overlay 坐标系完全一致，这里直接以 overlay 的实际可见尺寸为准
+        const cgBoard = el.querySelector('.cg-board');
+        const rect = cgBoard ? cgBoard.getBoundingClientRect() : overlay.getBoundingClientRect();
+        const W = rect.width;
+        const H = rect.height;
+        // 与棋盘保持同样的 1/8 分割（允许小数，确保与 62.5 等尺寸对齐）
+        const cellW = W / 8;
+        const cellH = H / 8;
+        const x = Array.from({ length: 9 }, (_, i) => i * cellW);
+        const y = Array.from({ length: 9 }, (_, i) => i * cellH);
+        // 为防止 .card 的内边距或外环导致误差，强制 overlay 自身填满容器
+        overlay.style.left = '0px';
+        overlay.style.top = '0px';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
 
         const showMineOnly = mode === 'mine';
         const showOppOnly = mode === 'opp';
@@ -382,8 +386,9 @@
             const cell = overlayCells[row * 8 + col];
             cell.style.left = x[col] + 'px';
             cell.style.top = y[row] + 'px';
-            cell.style.width = (x[col + 1] - x[col]) + 'px';
-            cell.style.height = (y[row + 1] - y[row]) + 'px';
+            // 使用 toFixed 防止长小数导致的累积渲染误差
+            cell.style.width = (x[col + 1] - x[col]).toFixed(2) + 'px';
+            cell.style.height = (y[row + 1] - y[row]).toFixed(2) + 'px';
             if (alpha > 0) {
               cell.className = 'overlay-cell ' + className;
               cell.style.setProperty('--alpha', alpha.toString());
