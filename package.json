@@ -1,0 +1,16 @@
+{
+  "name": "iwillnotblunder",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "wrangler pages dev .",
+    "deploy": "wrangler pages deploy ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}
+
+

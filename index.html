@@ -1,0 +1,356 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>iwillnotblunder</title>
+    <link rel="stylesheet" href="https://unpkg.com/@lichess-org/chessground/assets/chessground.base.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@lichess-org/chessground/assets/chessground.brown.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@lichess-org/chessground/assets/chessground.cburnett.css" />
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; margin: 0; padding: 16px; }
+      .container { display: grid; grid-template-columns: 520px 1fr; gap: 24px; }
+      .board-wrap { position: relative; width: 500px; height: 500px; }
+      .board { width: 500px; height: 500px; position: relative; }
+      .panel { display: flex; flex-direction: column; gap: 12px; }
+      .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+      .badge { background:#eee; border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+      .legend { font-size: 12px; color: #555; }
+      .row { display:flex; gap:8px; align-items:center; }
+      textarea { width: 100%; height: 72px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      button { padding: 8px 12px; }
+      .square-overlay { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index: 1000; box-sizing: border-box; }
+      .probe-cell { position:absolute; width:12.5%; height:12.5%; opacity:0; pointer-events:none; }
+      .board .cg-wrap { position: absolute !important; inset: 0 !important; }
+      /* 消除主题在容器与棋盘上的边框/内边距，确保覆盖层与棋盘同一参考系 */
+      .board .cg-wrap { border: 0 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box; }
+      .board .cg-board { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; border: 0 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box; }
+      /* 确保 cg-container 是定位上下文，使 overlay 绝对定位贴合其实际 496×496 尺寸 */
+      .board cg-container { display: block; position: relative !important; }
+      .overlay-cell { position:absolute; box-sizing:border-box; }
+      .heat { background: rgba(255,0,0,var(--alpha)); }
+      .heat-blue { background: rgba(0,120,255,var(--alpha)); }
+      .grid { position:relative; }
+      .square-overlay { transform: translateZ(0); }
+    </style>
+  </head>
+  <body>
+    <h1>iwillnotblunder</h1>
+    <div class="container">
+      <div class="grid">
+        <div class="board-wrap">
+          <div id="board" class="board brown"></div>
+          <div id="overlay" class="square-overlay"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="row">
+          <button id="btn-apply-fen">应用 FEN</button>
+          <button id="btn-reset">起始局面</button>
+          <button id="btn-toggle">显示/隐藏覆盖层 (A)</button>
+          <button id="btn-opponent">只看对方 (O)</button>
+          <button id="btn-mine">只看己方 (M)</button>
+          <button id="btn-clear">清空 (H)</button>
+          <button id="btn-switch-side">切换我方(白/黑)</button>
+        </div>
+        <textarea id="fen"></textarea>
+        <div class="badges">
+          <span class="badge">快捷键：A 显示全部 / O 只对方 / M 只己方 / H 清空</span>
+          <span class="badge">拖拽或点击走子也会实时更新覆盖层</span>
+        </div>
+        <div class="legend">红色：对方控制强度；蓝色：己方控制强度。透明度按控制次数线性映射。</div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { Chessground } from 'https://cdn.skypack.dev/@lichess-org/chessground';
+      import { Chess } from 'https://esm.sh/chess.js@1.4.0';
+
+      const el = document.getElementById('board');
+      const overlay = document.getElementById('overlay');
+      const overlayCells = [];
+      const fenInput = document.getElementById('fen');
+
+      const chess = new Chess();
+      fenInput.value = chess.fen();
+
+      let myColor = 'w'; // 'w' 我方为白；'b' 我方为黑
+
+      const ground = Chessground(el, {
+        orientation: 'white',
+        movable: { color: 'white', showDests: true, free: false, events: { after: onAfterMove } },
+        premovable: { enabled: false },
+        drawable: { enabled: false, visible: false },
+      });
+
+      function ensureOverlayAttached() {
+        const cgBoard = el.querySelector('.cg-board');
+        if (cgBoard && overlay.parentElement !== cgBoard) {
+          cgBoard.appendChild(overlay);
+          // 覆盖层占满棋盘可见区域
+          overlay.style.left = '0';
+          overlay.style.top = '0';
+          overlay.style.width = '100%';
+          overlay.style.height = '100%';
+          // 基于真实棋盘百分比分割，探测第一格尺寸，取整后用于像素化布局
+          const probe = document.createElement('div');
+          probe.className = 'probe-cell';
+          overlay.appendChild(probe);
+          // 下一帧读取尺寸并移除
+          requestAnimationFrame(() => {
+            const rect = probe.getBoundingClientRect();
+            overlay.dataset.cellW = String(Math.floor(rect.width));
+            overlay.dataset.cellH = String(Math.floor(rect.height));
+            overlay.removeChild(probe);
+            refreshOverlay();
+          });
+        }
+      }
+      ensureOverlayAttached();
+
+      function onAfterMove(orig, dest) {
+        const move = chess.move({ from: orig, to: dest, promotion: 'q' });
+        if (!move) {
+          ground.cancelMove();
+          return;
+        }
+        ground.set({ fen: chess.fen(), lastMove: [orig, dest] });
+        updateMovable();
+        refreshOverlay();
+      }
+
+      // ===== 精确“攻击格”计算（不依赖合法走法；忽略钉住的抑制） =====
+      const filesArr = ['a','b','c','d','e','f','g','h'];
+      const ranksArr = ['1','2','3','4','5','6','7','8'];
+      const inBounds = (f, r) => f >= 0 && f < 8 && r >= 0 && r < 8;
+      const toSq = (f, r) => `${String.fromCharCode('a'.charCodeAt(0) + f)}${r + 1}`;
+      const fromSq = (sq) => ({
+        f: sq.charCodeAt(0) - 'a'.charCodeAt(0),
+        r: parseInt(sq[1], 10) - 1,
+      });
+
+      function enumerateAttacksFor(square, piece) {
+        const { f, r } = fromSq(square);
+        const res = [];
+        const color = piece.color; // 'w' | 'b'
+        const type = piece.type;   // 'p','n','b','r','q','k'
+
+        const pushIf = (nf, nr) => {
+          if (!inBounds(nf, nr)) return false;
+          const targetSq = toSq(nf, nr);
+          res.push(targetSq);
+          // For sliders, caller will decide whether to continue
+          return !chess.get(targetSq);
+        };
+
+        if (type === 'p') {
+          const dir = color === 'w' ? 1 : -1;
+          const cand = [ [f - 1, r + dir], [f + 1, r + dir] ];
+          for (const [nf, nr] of cand) if (inBounds(nf, nr)) res.push(toSq(nf, nr));
+          return res;
+        }
+
+        if (type === 'n') {
+          const d = [
+            [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+            [1, -2], [1, 2], [2, -1], [2, 1],
+          ];
+          for (const [df, dr] of d) {
+            const nf = f + df, nr = r + dr;
+            if (inBounds(nf, nr)) res.push(toSq(nf, nr));
+          }
+          return res;
+        }
+
+        if (type === 'k') {
+          const d = [
+            [-1,-1], [-1,0], [-1,1], [0,-1], [0,1], [1,-1], [1,0], [1,1]
+          ];
+          for (const [df, dr] of d) {
+            const nf = f + df, nr = r + dr;
+            if (inBounds(nf, nr)) res.push(toSq(nf, nr));
+          }
+          return res;
+        }
+
+        // sliding pieces
+        const dirs = [];
+        if (type === 'b' || type === 'q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+        if (type === 'r' || type === 'q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+        for (const [df, dr] of dirs) {
+          let nf = f + df, nr = r + dr;
+          while (inBounds(nf, nr)) {
+            const cont = pushIf(nf, nr);
+            const target = toSq(nf, nr);
+            if (chess.get(target)) break; // stop at first piece (friend/enemy)
+            nf += df; nr += dr;
+          }
+        }
+        return res;
+      }
+
+      function computeControl() {
+        const size = 8;
+        const white = Array.from({ length: size }, () => Array(size).fill(0));
+        const black = Array.from({ length: size }, () => Array(size).fill(0));
+
+        for (const f of filesArr) {
+          for (const r of ranksArr) {
+            const sq = `${f}${r}`;
+            const piece = chess.get(sq);
+            if (!piece) continue;
+            const attacks = enumerateAttacksFor(sq, piece);
+            for (const t of attacks) {
+              const tf = t.charCodeAt(0) - 'a'.charCodeAt(0);
+              const tr = parseInt(t[1], 10) - 1;
+              if (piece.color === 'w') white[tr][tf] += 1;
+              else black[tr][tf] += 1;
+            }
+          }
+        }
+        return { white, black };
+      }
+
+      function ensureOverlayCells() {
+        if (overlay.childElementCount === 64 && overlayCells.length === 64) return;
+        overlay.innerHTML = '';
+        overlayCells.length = 0;
+        for (let i = 0; i < 64; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'overlay-cell';
+          cell.style.pointerEvents = 'none';
+          overlay.appendChild(cell);
+          overlayCells.push(cell);
+        }
+      }
+
+      function refreshOverlay({ showMine = true, showOpp = true } = {}) {
+        ensureOverlayAttached();
+        ensureOverlayCells();
+        const { white, black } = computeControl();
+        const mineColor = myColor;
+        const oppColor = mineColor === 'w' ? 'b' : 'w';
+
+        const maxVal = 6;
+        const isWhitePerspective = myColor === 'w';
+
+        // 以像素对齐，避免百分比累计舍入误差
+        // 以整数像素划分出“内棋盘”区域：每格尺寸向下取整，余数均分到四周边距
+        // 读取棋盘真实内容尺寸（cg-container），不要用 overlay 自己的 clientWidth，避免盒模型差异
+        const container = el.querySelector('cg-container');
+        const rect = container ? container.getBoundingClientRect() : overlay.getBoundingClientRect();
+        const W = Math.round(rect.width);
+        const H = Math.round(rect.height);
+        // 优先使用探测到的单格整数宽高
+        const probedW = 0;
+        const probedH = 0;
+        const cellW = probedW > 0 ? probedW : Math.floor(W / 8);
+        const cellH = probedH > 0 ? probedH : Math.floor(H / 8);
+        const innerW = cellW * 8;
+        const innerH = cellH * 8;
+        const offsetX = Math.round((W - innerW) / 2);
+        const offsetY = Math.round((H - innerH) / 2);
+        const x = Array.from({ length: 9 }, (_, i) => i < 8 ? offsetX + i * cellW : offsetX + innerW);
+        const y = Array.from({ length: 9 }, (_, i) => i < 8 ? offsetY + i * cellH : offsetY + innerH);
+
+        // 如果两者都不显示，则统一隐藏并返回
+        if (!showMine && !showOpp) {
+          for (let i = 0; i < 64; i++) overlayCells[i].style.display = 'none';
+          return;
+        }
+
+        for (let r = 0; r < 8; r++) {
+          for (let f = 0; f < 8; f++) {
+            const wv = white[r][f];
+            const bv = black[r][f];
+            const mineV = mineColor === 'w' ? wv : bv;
+            const oppV = oppColor === 'w' ? wv : bv;
+            const col = isWhitePerspective ? f : 7 - f;
+            const row = isWhitePerspective ? 7 - r : r;
+
+            let alpha = 0;
+            let className = '';
+            if (showMine && mineV > 0) {
+              alpha = Math.min(0.7, mineV / maxVal);
+              className = 'heat-blue';
+            }
+            if (showOpp && oppV > 0 && oppV >= mineV) {
+              alpha = Math.min(0.7, oppV / maxVal);
+              className = 'heat';
+            }
+            const cell = overlayCells[row * 8 + col];
+            cell.style.left = x[col] + 'px';
+            cell.style.top = y[row] + 'px';
+            cell.style.width = (x[col + 1] - x[col]) + 'px';
+            cell.style.height = (y[row + 1] - y[row]) + 'px';
+            if (alpha > 0) {
+              cell.className = 'overlay-cell ' + className;
+              cell.style.setProperty('--alpha', alpha.toString());
+              cell.style.display = 'block';
+            } else {
+              cell.style.display = 'none';
+            }
+          }
+        }
+      }
+
+      document.getElementById('btn-apply-fen').onclick = () => {
+        const val = fenInput.value.trim();
+        try {
+          chess.load(val);
+          ground.set({ fen: chess.fen() });
+          updateMovable();
+          refreshOverlay();
+        } catch (e) { alert('FEN 无效'); }
+      };
+      document.getElementById('btn-reset').onclick = () => {
+        chess.reset();
+        ground.set({ fen: chess.fen(), lastMove: undefined });
+        updateMovable();
+        refreshOverlay();
+      };
+
+      let showAll = false;
+      document.getElementById('btn-toggle').onclick = () => { showAll = !showAll; refreshOverlay({ showMine: showAll, showOpp: showAll }); };
+      document.getElementById('btn-opponent').onclick = () => refreshOverlay({ showMine: false, showOpp: true });
+      document.getElementById('btn-mine').onclick = () => refreshOverlay({ showMine: true, showOpp: false });
+      document.getElementById('btn-clear').onclick = () => overlay.innerHTML = '';
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'a' || e.key === 'A') { showAll = !showAll; refreshOverlay({ showMine: showAll, showOpp: showAll }); }
+        else if (e.key === 'o' || e.key === 'O') refreshOverlay({ showMine: false, showOpp: true });
+        else if (e.key === 'm' || e.key === 'M') refreshOverlay({ showMine: true, showOpp: false });
+        else if (e.key === 'h' || e.key === 'H') overlay.innerHTML = '';
+      });
+
+      // 切换“我方”颜色，同时切换棋盘朝向
+      document.getElementById('btn-switch-side').onclick = () => {
+        myColor = myColor === 'w' ? 'b' : 'w';
+        ground.set({ orientation: myColor === 'w' ? 'white' : 'black' });
+        refreshOverlay();
+      };
+
+      // 处理窗口/容器尺寸变化时的像素重绘
+      const ro = new ResizeObserver(() => refreshOverlay());
+      ro.observe(document.querySelector('.board-wrap'));
+      window.addEventListener('resize', () => refreshOverlay());
+
+      function updateMovable() {
+        const verbose = chess.moves({ verbose: true });
+        const dests = new Map();
+        for (const m of verbose) {
+          if (!dests.has(m.from)) dests.set(m.from, []);
+          dests.get(m.from).push(m.to);
+        }
+        // 允许点选双方棋子，但只有轮到的一方会有可走目的地
+        ground.set({ movable: { color: 'both', dests, showDests: true, free: false } });
+      }
+
+      ground.set({ orientation: myColor === 'w' ? 'white' : 'black' });
+      updateMovable();
+      refreshOverlay();
+    </script>
+  </body>
+  </html>
+
+
