@@ -8,17 +8,41 @@
     <link rel="stylesheet" href="https://unpkg.com/@lichess-org/chessground/assets/chessground.brown.css" />
     <link rel="stylesheet" href="https://unpkg.com/@lichess-org/chessground/assets/chessground.cburnett.css" />
     <style>
-      body { font-family: ui-sans-serif, system-ui, -apple-system; margin: 0; padding: 16px; }
+      :root {
+        --bg: #0b0f17;
+        --surface: #121826;
+        --surface-2: #0f1523;
+        --text: #e6ecff;
+        --muted: #93a1b5;
+        --primary: #4f8cff;
+        --primary-600: #3a70d9;
+        --ring: rgba(79, 140, 255, 0.5);
+        --border: #1f2937;
+        --badge: #1b2333;
+      }
+      * { box-sizing: border-box; }
+      body { font-family: ui-sans-serif, system-ui, -apple-system; margin: 0; padding: 24px; background: var(--bg); color: var(--text); }
+      .topbar { display:flex; align-items:center; justify-content: space-between; margin-bottom: 16px; }
+      .brand { font-weight: 700; letter-spacing: 0.3px; }
+      .lang-switch { display:flex; gap:8px; }
+      .lang-switch button { padding: 6px 10px; border:1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 8px; cursor: pointer; }
+      .lang-switch button.active { border-color: var(--primary); outline: 2px solid var(--ring); }
+
       .container { display: grid; grid-template-columns: 520px 1fr; gap: 24px; }
-      .board-wrap { position: relative; width: 500px; height: 500px; }
-      .board { width: 500px; height: 500px; position: relative; }
-      .panel { display: flex; flex-direction: column; gap: 12px; }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+      .board-wrap { position: relative; width: 500px; height: 500px; padding: 10px; }
+      .board { width: 500px; height: 500px; position: relative; border-radius: 10px; overflow: hidden; }
+      .panel { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
       .badges { display: flex; gap: 8px; flex-wrap: wrap; }
-      .badge { background:#eee; border-radius: 6px; padding: 4px 8px; font-size: 12px; }
-      .legend { font-size: 12px; color: #555; }
-      .row { display:flex; gap:8px; align-items:center; }
-      textarea { width: 100%; height: 72px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-      button { padding: 8px 12px; }
+      .badge { background: var(--badge); border:1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 12px; color: var(--muted); }
+      .legend { font-size: 12px; color: var(--muted); }
+      .row { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+      textarea { width: 100%; height: 84px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); color: var(--text); border:1px solid var(--border); border-radius: 10px; padding: 10px; }
+      button { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; transition: border-color .15s ease, transform .05s ease; }
+      button:hover { border-color: var(--primary); }
+      button:active { transform: translateY(1px); }
+      .btn-primary { background: linear-gradient(180deg, var(--primary), var(--primary-600)); border-color: var(--primary-600); color: white; }
+      .btn-outline { background: transparent; }
       .square-overlay { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index: 1000; box-sizing: border-box; }
       .probe-cell { position:absolute; width:12.5%; height:12.5%; opacity:0; pointer-events:none; }
       .board .cg-wrap { position: absolute !important; inset: 0 !important; }
@@ -35,30 +59,36 @@
     </style>
   </head>
   <body>
-    <h1>iwillnotblunder</h1>
+    <div class="topbar">
+      <div class="brand">iwillnotblunder</div>
+      <div class="lang-switch">
+        <button id="lang-en" class="active" data-i18n="lang.en">EN</button>
+        <button id="lang-zh" data-i18n="lang.zh">中文</button>
+      </div>
+    </div>
     <div class="container">
-      <div class="grid">
+      <div class="grid card">
         <div class="board-wrap">
           <div id="board" class="board brown"></div>
           <div id="overlay" class="square-overlay"></div>
         </div>
       </div>
-      <div class="panel">
+      <div class="panel card">
         <div class="row">
-          <button id="btn-apply-fen">应用 FEN</button>
-          <button id="btn-reset">起始局面</button>
-          <button id="btn-toggle">显示/隐藏覆盖层 (A)</button>
-          <button id="btn-opponent">只看对方 (O)</button>
-          <button id="btn-mine">只看己方 (M)</button>
-          <button id="btn-clear">隐藏 (H)</button>
-          <button id="btn-switch-side">切换我方(白/黑)</button>
+          <button id="btn-apply-fen" class="btn-primary" data-i18n="btn.applyFen">Apply FEN</button>
+          <button id="btn-reset" data-i18n="btn.reset">Start position</button>
+          <button id="btn-toggle" data-i18n="btn.toggle">Show/Hide overlay (A)</button>
+          <button id="btn-opponent" data-i18n="btn.opp">Opponent only (O)</button>
+          <button id="btn-mine" data-i18n="btn.mine">Mine only (M)</button>
+          <button id="btn-clear" data-i18n="btn.clear">Hide (H)</button>
+          <button id="btn-switch-side" data-i18n="btn.switchSide">Switch my side (White/Black)</button>
         </div>
         <textarea id="fen"></textarea>
         <div class="badges">
-          <span class="badge">快捷键：A 显示/隐藏（保留最近选择） / O 只对方 / M 只己方 / H 隐藏</span>
-          <span class="badge">拖拽或点击走子也会实时更新覆盖层</span>
+          <span class="badge" data-i18n="badge.shortcuts">Hotkeys: A show/hide (keep last side) / O opponent / M mine / H hide</span>
+          <span class="badge" data-i18n="badge.drag">Drag or click to move; overlay updates in real time</span>
         </div>
-        <div class="legend">红色：对方控制强度；蓝色：己方控制强度。透明度按控制次数线性映射。</div>
+        <div class="legend" data-i18n="legend">Red: opponent control; Blue: my control. Opacity scales linearly with count.</div>
       </div>
     </div>
 
@@ -86,6 +116,70 @@
         premovable: { enabled: false },
         drawable: { enabled: false, visible: false },
       });
+
+      // ===== 轻量 i18n（默认英文，支持中文；localStorage 持久化） =====
+      const LOCALE_KEY = 'locale';
+      const i18n = {
+        en: {
+          lang: { en: 'EN', zh: '中文' },
+          btn: {
+            applyFen: 'Apply FEN',
+            reset: 'Start position',
+            toggle: 'Show/Hide overlay (A)',
+            opp: 'Opponent only (O)',
+            mine: 'Mine only (M)',
+            clear: 'Hide (H)',
+            switchSide: 'Switch my side (White/Black)'
+          },
+          badge: {
+            shortcuts: 'Hotkeys: A show/hide (keep last side) / O opponent / M mine / H hide',
+            drag: 'Drag or click to move; overlay updates in real time'
+          },
+          legend: 'Red: opponent control; Blue: my control. Opacity scales linearly with count.'
+        },
+        zh: {
+          lang: { en: 'EN', zh: '中文' },
+          btn: {
+            applyFen: '应用 FEN',
+            reset: '起始局面',
+            toggle: '显示/隐藏覆盖层 (A)',
+            opp: '只看对方 (O)',
+            mine: '只看己方 (M)',
+            clear: '隐藏 (H)',
+            switchSide: '切换我方(白/黑)'
+          },
+          badge: {
+            shortcuts: '快捷键：A 显示/隐藏（保留最近选择） / O 只对方 / M 只己方 / H 隐藏',
+            drag: '拖拽或点击走子也会实时更新覆盖层'
+          },
+          legend: '红色：对方控制强度；蓝色：己方控制强度。透明度按控制次数线性映射。'
+        }
+      };
+
+      function getDictValue(dict, path) {
+        const parts = path.split('.');
+        let cur = dict;
+        for (const p of parts) {
+          if (cur && Object.prototype.hasOwnProperty.call(cur, p)) cur = cur[p];
+          else return undefined;
+        }
+        return cur;
+      }
+
+      let currentLocale = localStorage.getItem(LOCALE_KEY) || 'en';
+      function applyLocale(locale) {
+        currentLocale = locale;
+        localStorage.setItem(LOCALE_KEY, locale);
+        const dict = i18n[locale] || i18n.en;
+        document.querySelectorAll('[data-i18n]').forEach((el) => {
+          const key = el.getAttribute('data-i18n');
+          const val = getDictValue(dict, key);
+          if (typeof val === 'string') el.textContent = val;
+        });
+        // 激活语言按钮样式
+        document.getElementById('lang-en').classList.toggle('active', locale === 'en');
+        document.getElementById('lang-zh').classList.toggle('active', locale === 'zh');
+      }
 
       function ensureOverlayAttached() {
         const cgBoard = el.querySelector('.cg-board');
@@ -347,6 +441,10 @@
         refreshOverlay();
       };
 
+      // 语言切换按钮
+      document.getElementById('lang-en').onclick = () => applyLocale('en');
+      document.getElementById('lang-zh').onclick = () => applyLocale('zh');
+
       // 处理窗口/容器尺寸变化时的像素重绘
       const ro = new ResizeObserver(() => refreshOverlay());
       ro.observe(document.querySelector('.board-wrap'));
@@ -365,6 +463,8 @@
 
       ground.set({ orientation: myColor === 'w' ? 'white' : 'black' });
       updateMovable();
+      // 初始化语言与 UI
+      applyLocale(currentLocale);
       refreshOverlay();
     </script>
   </body>
