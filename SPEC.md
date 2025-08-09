@@ -19,10 +19,10 @@
   - 红色表示对方控制强度；蓝色表示己方控制强度。
   - 透明度按次数线性映射（可配置上限）。
 - 快捷键：
-  - A：显示/隐藏双方覆盖层
-  - O：只显示对方覆盖层
-  - M：只显示己方覆盖层
-  - H：清空覆盖层
+  - A：显示/隐藏覆盖层（保留最近一次选择的一方）
+  - O：只显示对方覆盖层（红）
+  - M：只显示己方覆盖层（蓝）
+  - H：隐藏覆盖层
 
 ### 2.2 近期增强
 - 更精确的“攻击格”计算（已部分实现：兵/马/王固定偏移；象/车/后射线延展，遇阻停止；暂未处理“钉住”的抑制）。
@@ -46,7 +46,7 @@
 - 前端：
   - UI：`@lichess-org/chessground`（ESM CDN 引入）。
   - 规则：`chess.js`（本地合法走法/回退）。
-  - 覆盖层：将覆盖层 DOM 挂载到 Chessground 内部的 `.cg-board` 上，叠加绝对定位 8×8 网格 Cell，按强度设置透明度；支持白/黑视角镜像。
+  - 覆盖层：将覆盖层 DOM 挂载到 Chessground 内部的 `.cg-board` 上，叠加绝对定位 8×8 网格 Cell，按强度设置透明度；支持白/黑视角镜像；同一时间仅显示一方（己方或对方）。
   - 样式：Chessground 样式通过 CDN（unpkg）引入。
 - 服务端（可选）：
   - Pages Functions 提供只读代理、后续 OAuth、对局流中转（SSE/WS），规避浏览器端 CORS/长流不稳。
@@ -122,5 +122,5 @@
   - 解决策略：
     1) 以棋盘内容为基准：将 `overlay` 绝对挂载在 `.cg-board` 下，并使用 `cg-container.getBoundingClientRect()` 的宽高计算网格；同时强制 `.board cg-container { position: relative !important; }` 作为定位上下文。
     2) 整数像素切分：用 `cellW=floor(W/8)`、`cellH=floor(H/8)` 构造内棋盘矩形（`innerW=cellW*8`，`innerH=cellH*8`），在 `overlay` 中居中对齐，生成 9 条像素边界；每格 `left/top/width/height` 均为整数，杜绝 62.5px 半像素。
-    3) 节点复用与单层显示：固定复用 64 个 `overlay-cell`，同一格只显示强度较大的一方（蓝或红），避免多节点叠加造成的错位；引入 `ResizeObserver` 与 `window.resize` 自动重算网格。
+    3) 节点复用与单层显示：固定复用 64 个 `overlay-cell`；同一时间仅显示一方（蓝=己方 或 红=对方），显示该方所有覆盖的格子，不因另一方也控制该格而被抑制；引入 `ResizeObserver` 与 `window.resize` 自动重算网格。
   - 效果：各格尺寸统一（如 62×62），与棋盘完全对齐；右下角无累计偏移；在缩放/DPR 环境下也稳定。

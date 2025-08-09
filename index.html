@@ -50,12 +50,12 @@
           <button id="btn-toggle">显示/隐藏覆盖层 (A)</button>
           <button id="btn-opponent">只看对方 (O)</button>
           <button id="btn-mine">只看己方 (M)</button>
-          <button id="btn-clear">清空 (H)</button>
+          <button id="btn-clear">隐藏 (H)</button>
           <button id="btn-switch-side">切换我方(白/黑)</button>
         </div>
         <textarea id="fen"></textarea>
         <div class="badges">
-          <span class="badge">快捷键：A 显示全部 / O 只对方 / M 只己方 / H 清空</span>
+          <span class="badge">快捷键：A 显示/隐藏（保留最近选择） / O 只对方 / M 只己方 / H 隐藏</span>
           <span class="badge">拖拽或点击走子也会实时更新覆盖层</span>
         </div>
         <div class="legend">红色：对方控制强度；蓝色：己方控制强度。透明度按控制次数线性映射。</div>
@@ -75,6 +75,10 @@
       fenInput.value = chess.fen();
 
       let myColor = 'w'; // 'w' 我方为白；'b' 我方为黑
+      // 覆盖层展示模式：同一时间只显示一方或隐藏
+      // 'opp' | 'mine' | 'none'
+      let currentMode = 'opp';
+      let lastMode = 'opp'; // 记录最近的非 none 模式，便于 A 键/按钮切换显示/隐藏
 
       const ground = Chessground(el, {
         orientation: 'white',
@@ -224,9 +228,17 @@
         }
       }
 
-      function refreshOverlay({ showMine = true, showOpp = true } = {}) {
+      function refreshOverlay(mode = currentMode) {
+        currentMode = mode;
         ensureOverlayAttached();
         ensureOverlayCells();
+
+        // 隐藏模式：全部隐藏并返回
+        if (mode === 'none') {
+          for (let i = 0; i < 64; i++) overlayCells[i].style.display = 'none';
+          return;
+        }
+
         const { white, black } = computeControl();
         const mineColor = myColor;
         const oppColor = mineColor === 'w' ? 'b' : 'w';
@@ -235,13 +247,10 @@
         const isWhitePerspective = myColor === 'w';
 
         // 以像素对齐，避免百分比累计舍入误差
-        // 以整数像素划分出“内棋盘”区域：每格尺寸向下取整，余数均分到四周边距
-        // 读取棋盘真实内容尺寸（cg-container），不要用 overlay 自己的 clientWidth，避免盒模型差异
         const container = el.querySelector('cg-container');
         const rect = container ? container.getBoundingClientRect() : overlay.getBoundingClientRect();
         const W = Math.round(rect.width);
         const H = Math.round(rect.height);
-        // 优先使用探测到的单格整数宽高
         const probedW = 0;
         const probedH = 0;
         const cellW = probedW > 0 ? probedW : Math.floor(W / 8);
@@ -253,11 +262,8 @@
         const x = Array.from({ length: 9 }, (_, i) => i < 8 ? offsetX + i * cellW : offsetX + innerW);
         const y = Array.from({ length: 9 }, (_, i) => i < 8 ? offsetY + i * cellH : offsetY + innerH);
 
-        // 如果两者都不显示，则统一隐藏并返回
-        if (!showMine && !showOpp) {
-          for (let i = 0; i < 64; i++) overlayCells[i].style.display = 'none';
-          return;
-        }
+        const showMineOnly = mode === 'mine';
+        const showOppOnly = mode === 'opp';
 
         for (let r = 0; r < 8; r++) {
           for (let f = 0; f < 8; f++) {
@@ -270,11 +276,12 @@
 
             let alpha = 0;
             let className = '';
-            if (showMine && mineV > 0) {
+            if (showMineOnly && mineV > 0) {
+              // 仅显示我方：不受对方控制强度影响
               alpha = Math.min(0.7, mineV / maxVal);
               className = 'heat-blue';
-            }
-            if (showOpp && oppV > 0 && oppV >= mineV) {
+            } else if (showOppOnly && oppV > 0) {
+              // 仅显示对方：不受我方控制强度影响
               alpha = Math.min(0.7, oppV / maxVal);
               className = 'heat';
             }
@@ -310,17 +317,27 @@
         refreshOverlay();
       };
 
-      let showAll = false;
-      document.getElementById('btn-toggle').onclick = () => { showAll = !showAll; refreshOverlay({ showMine: showAll, showOpp: showAll }); };
-      document.getElementById('btn-opponent').onclick = () => refreshOverlay({ showMine: false, showOpp: true });
-      document.getElementById('btn-mine').onclick = () => refreshOverlay({ showMine: true, showOpp: false });
-      document.getElementById('btn-clear').onclick = () => overlay.innerHTML = '';
+      document.getElementById('btn-toggle').onclick = () => {
+        const next = currentMode === 'none' ? lastMode : 'none';
+        refreshOverlay(next);
+      };
+      document.getElementById('btn-opponent').onclick = () => { lastMode = 'opp'; refreshOverlay('opp'); };
+      document.getElementById('btn-mine').onclick = () => { lastMode = 'mine'; refreshOverlay('mine'); };
+      document.getElementById('btn-clear').onclick = () => refreshOverlay('none');
 
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'a' || e.key === 'A') { showAll = !showAll; refreshOverlay({ showMine: showAll, showOpp: showAll }); }
-        else if (e.key === 'o' || e.key === 'O') refreshOverlay({ showMine: false, showOpp: true });
-        else if (e.key === 'm' || e.key === 'M') refreshOverlay({ showMine: true, showOpp: false });
-        else if (e.key === 'h' || e.key === 'H') overlay.innerHTML = '';
+        if (e.key === 'a' || e.key === 'A') {
+          const next = currentMode === 'none' ? lastMode : 'none';
+          refreshOverlay(next);
+        } else if (e.key === 'o' || e.key === 'O') {
+          lastMode = 'opp';
+          refreshOverlay('opp');
+        } else if (e.key === 'm' || e.key === 'M') {
+          lastMode = 'mine';
+          refreshOverlay('mine');
+        } else if (e.key === 'h' || e.key === 'H') {
+          refreshOverlay('none');
+        }
       });
 
       // 切换“我方”颜色，同时切换棋盘朝向
