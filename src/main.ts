@@ -27,14 +27,14 @@ const i18n = {
     btn: {
       applyFen: 'Apply FEN',
       reset: 'Start position',
-      toggle: 'Show/Hide (A)',
       opp: 'Opponent (O)',
       mine: 'Mine (M)',
       clear: 'Hide (H)',
-      switchSide: 'Switch side (W/B)'
+      switchSide: 'Switch side (W/B)',
+      login: 'Login with Lichess'
     },
     badge: {
-      shortcuts: 'Hotkeys: A show/hide (keep last side) / O opponent / M mine / H hide',
+      shortcuts: 'Hotkeys: O opponent / M mine / H hide',
       drag: 'Drag or click to move; overlay updates in real time'
     },
     legend: 'Red: opponent control; Blue: my control. Opacity scales linearly with count.'
@@ -44,14 +44,14 @@ const i18n = {
     btn: {
       applyFen: '应用 FEN',
       reset: '起始局面',
-      toggle: '显示/隐藏 (A)',
       opp: '只看对方 (O)',
       mine: '只看己方 (M)',
       clear: '隐藏 (H)',
-      switchSide: '切换我方(白/黑)'
+      switchSide: '切换我方(白/黑)',
+      login: '登录 Lichess'
     },
     badge: {
-      shortcuts: '快捷键：A 显示/隐藏（保留最近选择） / O 只对方 / M 只己方 / H 隐藏',
+      shortcuts: '快捷键：O 只对方 / M 只己方 / H 隐藏',
       drag: '拖拽或点击走子也会实时更新覆盖层'
     },
     legend: '红色：对方控制强度；蓝色：己方控制强度。透明度按控制次数线性映射。'
@@ -308,19 +308,19 @@ document.getElementById('btn-reset')!.addEventListener('click', () => {
   refreshOverlay();
 });
 
-document.getElementById('btn-toggle')!.addEventListener('click', () => {
-  const next = currentMode === 'none' ? lastMode : 'none';
-  refreshOverlay(next as any);
-});
 document.getElementById('btn-opponent')!.addEventListener('click', () => { lastMode = 'opp'; refreshOverlay('opp'); });
 document.getElementById('btn-mine')!.addEventListener('click', () => { lastMode = 'mine'; refreshOverlay('mine'); });
 document.getElementById('btn-clear')!.addEventListener('click', () => refreshOverlay('none'));
 
+const loginBtn = document.getElementById('btn-login-lichess');
+if (loginBtn) {
+  loginBtn.addEventListener('click', () => {
+    window.location.href = '/api/oauth/login';
+  });
+}
+
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'a' || e.key === 'A') {
-    const next = currentMode === 'none' ? lastMode : 'none';
-    refreshOverlay(next as any);
-  } else if (e.key === 'o' || e.key === 'O') {
+  if (e.key === 'o' || e.key === 'O') {
     lastMode = 'opp';
     refreshOverlay('opp');
   } else if (e.key === 'm' || e.key === 'M') {
