@@ -32,7 +32,7 @@
   - 使用 CSS 变量作为设计令牌（颜色、阴影、圆角、间距）。
   - 统一按钮样式（主色、描边、悬停态），面板卡片化，阴影与圆角适中。
   - 与棋盘容器像素对齐策略兼容（不影响覆盖层像素切分）。
-  - 保持纯前端实现，兼容 Cloudflare Pages 纯静态部署（不引入构建工具）。
+  - 前端采用 Vite + TypeScript 构建，产物静态部署到 Cloudflare Pages。
 
 ### 2.2 近期增强
 - 更精确的“攻击格”计算（已部分实现：兵/马/王固定偏移；象/车/后射线延展，遇阻停止；暂未处理“钉住”的抑制）。
@@ -48,7 +48,7 @@
 
 ## 3. 非功能需求
 - 性能：覆盖层渲染尽量在 16–33ms 帧预算内。
-- 兼容：现代浏览器（ESM、CSS 变量、Flex/Grid）。
+- 兼容：现代浏览器（ESM、CSS 变量、Flex/Grid）；生产环境由 Vite 产出静态资源。
 - 许可：Chessground 为 GPL-3.0-or-later，用于网站需 GPL 开源合并作品源码（注意合规）。
 
 ## 4. 技术架构
@@ -78,16 +78,18 @@
 ## 6. 目录结构
 ```
 / (root)
-  index.html                 # 前端页面（ESM 引入 chessground 与 chess.js）
-  /assets
-    chessground.base.css     # 通过 CDN import
-    chessground.brown.css
-    chessground.cburnett.css
+  index.html                 # 页面外壳，开发态通过 <script type="module" src="/src/main.ts">
+  /src
+    main.ts                  # 前端主逻辑（Chessground、chess.js、覆盖层、i18n、UI 交互）
   /functions
-    lichess-proxy.ts         # 只读代理（限制 lichess.org 域），后续扩展 OAuth/流中转
+    lichess-proxy.ts         # Pages Functions：只读代理（限制 lichess.org），后续可扩展 OAuth/流中转
+  /dist                      # 构建输出目录（Cloudflare Pages 部署根）
+    index.html
+    /assets/*                # 打包产物
   package.json
+  tsconfig.json
   wrangler.jsonc             # Cloudflare Pages/Functions 配置
-  SPEC.md                    # 本文档
+  SPEC.md                    # 规格说明
 ```
 
 ## 7. 覆盖层算法
@@ -142,7 +144,7 @@
   - 默认英文界面，提供 `EN / 中文` 切换，选择持久化。
   - 统一按钮与卡片样式；纯静态资源，兼容 Cloudflare Pages。
 
-- 新增：移动端响应式设计（2025-01）
+- 新增：移动端响应式设计（2025-08）
   - 全面移动端适配：支持桌面、平板、手机、超小屏幕等多种设备。
   - 响应式布局：
     - 桌面端（>1024px）：棋盘和控制面板并排显示
@@ -163,3 +165,8 @@
     - 文本区域在移动端减小高度
     - 徽章字体和间距适配小屏幕
     - 保持所有功能（棋盘交互、覆盖层、快捷键、语言切换）的完整可用性
+
+- 新增：构建与部署改造（2025-08）
+  - 采用 Vite + TypeScript 开发与构建；源代码位于 `src/`，产物输出到 `dist/`。
+  - Cloudflare Pages 使用 `dist/` 作为站点根；本地通过 `wrangler pages dev dist` 预览。
+  - 开发命令：`npm run dev`（Vite），`npm run build`（产出 `dist/`）。
