@@ -52,15 +52,16 @@
 - 许可：Chessground 为 GPL-3.0-or-later，用于网站需 GPL 开源合并作品源码（注意合规）。
 
 ## 4. 技术架构
-- 托管：Cloudflare Pages（静态前端）+ Pages Functions（轻量服务端）。
+- 托管：Cloudflare Pages（静态前端，`dist/` 作为站点根）+ Pages Functions（轻量服务端）。
 - 前端：
-  - UI：`@lichess-org/chessground`（ESM CDN 引入）。
+  - 构建：Vite + TypeScript。源代码在 `src/`，打包输出至 `dist/`。
+  - UI：`@lichess-org/chessground`（通过 CDN 动态导入）。
   - 规则：`chess.js`（本地合法走法/回退）。
-  - 覆盖层：将覆盖层 DOM 挂载到 Chessground 内部的 `.cg-board` 上，叠加绝对定位 8×8 网格 Cell，按强度设置透明度；支持白/黑视角镜像；同一时间仅显示一方（己方或对方）。
-  - i18n：内置轻量字典（EN/中文），通过 `data-i18n` 映射到 DOM，语言状态存于 `localStorage`，默认 EN；不依赖第三方库。
+  - 覆盖层：将覆盖层 DOM 挂载到 `.cg-board` 下，使用 8×8 绝对定位网格，透明度按次数映射；支持视角镜像；同一时间仅显示一方。
+  - i18n：内置轻量字典（EN/中文），通过 `data-i18n` 映射到 DOM，语言状态存于 `localStorage`。
   - 样式：Chessground 样式通过 CDN（unpkg）引入。
 - 服务端（可选）：
-  - Pages Functions 提供只读代理、后续 OAuth、对局流中转（SSE/WS），规避浏览器端 CORS/长流不稳。
+  - Pages Functions 提供只读代理、后续 OAuth、对局流中转（SSE/WS）。
 
 ## 5. 数据流
 ### 5.1 离线模式
@@ -111,12 +112,13 @@
 - 安全：Token 仅存服务端，通过自建 SSE/WS 向前端推送。
 
 ## 9. 开发与部署
-- 本地：
-  - `npx wrangler pages dev . --port 8090`
-  - 打开 `http://localhost:8090`
+- 本地开发：
+  - `npm run dev`（Vite 开发服务器：`http://localhost:5173`）
+  - `npm run build` 生成 `dist/`
+  - `npx wrangler pages dev dist --port 8090`（本地模拟 Pages）
 - 部署：
-  - `npx wrangler pages deploy .`
- - 工具版本：本地开发建议使用 `wrangler@^4.28.1` 以获得最新 Workers 兼容特性并消除兼容日期降级提示。
+  - `npx wrangler pages deploy dist`
+- 工具版本：本地开发建议使用 `wrangler@^4.28.1`。
 
 ## 10. 路线图
 - v0.2：精确攻击格；格子数值显示；颜色/阈值可配；UI 美化。

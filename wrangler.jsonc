@@ -1,6 +1,6 @@
 {
   "name": "iwillnotblunder",
-  "pages_build_output_dir": ".",
+  "pages_build_output_dir": "dist",
   "compatibility_date": "2025-08-01"
 }
 

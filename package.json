@@ -4,13 +4,15 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "dev": "wrangler pages dev .",
-    "deploy": "wrangler pages deploy ."
+    "dev": "vite --port 5173",
+    "preview": "vite preview --port 5173",
+    "build": "vite build",
+    "pages:dev": "wrangler pages dev dist --port 8090",
+    "pages:deploy": "wrangler pages deploy dist"
   },
-  "dependencies": {},
   "devDependencies": {
-    "wrangler": "^3.80.0"
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8",
+    "wrangler": "^4.28.1"
   }
 }
-
-
