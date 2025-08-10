@@ -21,33 +21,215 @@
         --badge: #1b2333;
       }
       * { box-sizing: border-box; }
-      body { font-family: ui-sans-serif, system-ui, -apple-system; margin: 0; padding: 24px; background: var(--bg); color: var(--text); }
-      .topbar { display:flex; align-items:center; justify-content: space-between; margin-bottom: 16px; }
+      body { 
+        font-family: ui-sans-serif, system-ui, -apple-system; 
+        margin: 0; 
+        padding: 16px; 
+        background: var(--bg); 
+        color: var(--text); 
+        min-height: 100vh;
+      }
+      
+      /* 移动端优化 */
+      @media (max-width: 768px) {
+        body { padding: 12px; }
+      }
+      
+      .topbar { 
+        display:flex; 
+        align-items:center; 
+        justify-content: space-between; 
+        margin-bottom: 16px; 
+        flex-wrap: wrap;
+        gap: 12px;
+      }
       .brand { font-weight: 700; letter-spacing: 0.3px; }
       .lang-switch { display:flex; gap:8px; }
-      .lang-switch button { padding: 6px 10px; border:1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 8px; cursor: pointer; }
+      .lang-switch button { 
+        padding: 6px 10px; 
+        border:1px solid var(--border); 
+        background: var(--surface-2); 
+        color: var(--text); 
+        border-radius: 8px; 
+        cursor: pointer; 
+        min-width: 44px; /* 触摸友好 */
+      }
       .lang-switch button.active { border-color: var(--primary); outline: 2px solid var(--ring); }
 
-      .container { display: grid; grid-template-columns: 520px 1fr; gap: 24px; }
-      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); position: relative; }
-      .board-wrap { position: relative; width: 500px; height: 500px; padding: 0; }
+      .container { 
+        display: grid; 
+        grid-template-columns: 520px 1fr; 
+        gap: 24px; 
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      
+      /* 移动端响应式布局 */
+      @media (max-width: 1024px) {
+        .container { 
+          grid-template-columns: 1fr; 
+          gap: 16px; 
+        }
+      }
+      
+      @media (max-width: 768px) {
+        .container { 
+          gap: 12px; 
+        }
+      }
+      
+      .card { 
+        background: var(--surface); 
+        border: 1px solid var(--border); 
+        border-radius: 14px; 
+        box-shadow: 0 6px 20px rgba(0,0,0,0.35); 
+        position: relative; 
+      }
+      .board-wrap { 
+        position: relative; 
+        width: 500px; 
+        height: 500px; 
+        padding: 0; 
+        margin: 0 auto;
+      }
+      
+      /* 移动端棋盘自适应 */
+      @media (max-width: 768px) {
+        .board-wrap { 
+          width: 100%; 
+          max-width: 400px; 
+          height: auto; 
+          aspect-ratio: 1;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .board-wrap { 
+          max-width: 320px; 
+        }
+      }
+      
       /* 让棋盘卡片与棋盘内容同一定位上下文，阴影不影响内部测量 */
       .grid.card { padding: 10px; }
       .grid.card, .panel.card { overflow: visible; }
-      .board { width: 500px; height: 500px; position: relative; border-radius: 10px; overflow: hidden; }
-      .panel { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-      .badges { display: flex; gap: 8px; flex-wrap: wrap; }
-      .badge { background: var(--badge); border:1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 12px; color: var(--muted); }
-      .legend { font-size: 12px; color: var(--muted); }
-      .row { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
-      textarea { width: 100%; height: 84px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); color: var(--text); border:1px solid var(--border); border-radius: 10px; padding: 10px; }
-      button { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; transition: border-color .15s ease, transform .05s ease; }
+      .board { 
+        width: 100%; 
+        height: 100%; 
+        position: relative; 
+        border-radius: 10px; 
+        overflow: hidden; 
+      }
+      .panel { 
+        padding: 16px; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px; 
+      }
+      
+      @media (max-width: 768px) {
+        .panel { 
+          padding: 12px; 
+          gap: 12px; 
+        }
+      }
+      
+      .badges { 
+        display: flex; 
+        gap: 8px; 
+        flex-wrap: wrap; 
+      }
+      .badge { 
+        background: var(--badge); 
+        border:1px solid var(--border); 
+        border-radius: 8px; 
+        padding: 4px 8px; 
+        font-size: 12px; 
+        color: var(--muted); 
+      }
+      .legend { 
+        font-size: 12px; 
+        color: var(--muted); 
+      }
+      .row { 
+        display:flex; 
+        gap:8px; 
+        align-items:center; 
+        flex-wrap: wrap; 
+      }
+      
+      @media (max-width: 768px) {
+        .row { 
+          gap: 6px; 
+        }
+      }
+      
+      textarea { 
+        width: 100%; 
+        height: 84px; 
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
+        background: var(--surface-2); 
+        color: var(--text); 
+        border:1px solid var(--border); 
+        border-radius: 10px; 
+        padding: 10px; 
+        resize: vertical;
+        min-height: 60px;
+      }
+      
+      @media (max-width: 768px) {
+        textarea { 
+          height: 60px; 
+          min-height: 50px;
+          font-size: 14px;
+        }
+      }
+      
+      button { 
+        padding: 10px 12px; 
+        border-radius: 10px; 
+        border: 1px solid var(--border); 
+        background: var(--surface-2); 
+        color: var(--text); 
+        cursor: pointer; 
+        transition: border-color .15s ease, transform .05s ease; 
+        font-size: 14px;
+        min-height: 44px; /* 触摸友好 */
+        white-space: nowrap;
+      }
+      
+      @media (max-width: 768px) {
+        button { 
+          padding: 10px 8px; 
+          font-size: 13px; 
+          min-height: 44px;
+        }
+      }
+      
       button:hover { border-color: var(--primary); }
       button:active { transform: translateY(1px); }
-      .btn-primary { background: linear-gradient(180deg, var(--primary), var(--primary-600)); border-color: var(--primary-600); color: white; }
+      .btn-primary { 
+        background: linear-gradient(180deg, var(--primary), var(--primary-600)); 
+        border-color: var(--primary-600); 
+        color: white; 
+      }
       .btn-outline { background: transparent; }
-      .square-overlay { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index: 1000; box-sizing: border-box; }
-      .probe-cell { position:absolute; width:12.5%; height:12.5%; opacity:0; pointer-events:none; }
+      .square-overlay { 
+        position:absolute; 
+        left:0; 
+        top:0; 
+        width:100%; 
+        height:100%; 
+        pointer-events:none; 
+        z-index: 1000; 
+        box-sizing: border-box; 
+      }
+      .probe-cell { 
+        position:absolute; 
+        width:12.5%; 
+        height:12.5%; 
+        opacity:0; 
+        pointer-events:none; 
+      }
       .board .cg-wrap { position: absolute !important; inset: 0 !important; }
       /* 消除主题在容器与棋盘上的边框/内边距，确保覆盖层与棋盘同一参考系 */
       .board .cg-wrap { border: 0 !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box; }
@@ -59,6 +241,108 @@
       .heat-blue { background: rgba(0,120,255,var(--alpha)); }
       .grid { position:relative; }
       .square-overlay { transform: translateZ(0); }
+      
+      /* 移动端按钮组优化 */
+      @media (max-width: 768px) {
+        .row {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+        }
+        
+        .row button {
+          width: 100%;
+          text-align: center;
+          white-space: normal;
+          word-break: break-word;
+          line-height: 1.2;
+          padding: 10px 6px;
+        }
+        
+        /* 主要按钮独占一行 */
+        .btn-primary {
+          grid-column: 1 / -1;
+        }
+        
+        /* 切换按钮独占一行 */
+        #btn-switch-side {
+          grid-column: 1 / -1;
+        }
+      }
+      
+      /* 超小屏幕按钮优化 */
+      @media (max-width: 480px) {
+        .row {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+        
+        .row button {
+          padding: 8px 4px;
+          font-size: 12px;
+        }
+      }
+      
+      /* 移动端徽章优化 */
+      @media (max-width: 768px) {
+        .badge {
+          font-size: 11px;
+          padding: 3px 6px;
+        }
+      }
+      
+      /* 移动端语言切换优化 */
+      @media (max-width: 480px) {
+        .topbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        
+        .lang-switch {
+          justify-content: center;
+        }
+      }
+      
+      /* 移动端额外优化 */
+      @media (max-width: 768px) {
+        /* 确保棋盘在移动端有足够的触摸区域 */
+        .board .cg-wrap {
+          touch-action: manipulation;
+        }
+        
+        /* 确保文本在小屏幕上可读 */
+        .legend {
+          font-size: 11px;
+          line-height: 1.4;
+        }
+        
+        /* 优化徽章显示 */
+        .badges {
+          gap: 6px;
+        }
+        
+        .badge {
+          font-size: 10px;
+          padding: 3px 6px;
+          line-height: 1.3;
+        }
+      }
+      
+      /* 超小屏幕优化 */
+      @media (max-width: 360px) {
+        body {
+          padding: 8px;
+        }
+        
+        .board-wrap {
+          max-width: 280px;
+        }
+        
+        .row button {
+          font-size: 12px;
+          padding: 6px 8px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -118,6 +402,10 @@
         movable: { color: 'white', showDests: true, free: false, events: { after: onAfterMove } },
         premovable: { enabled: false },
         drawable: { enabled: false, visible: false },
+        // 移动端优化：启用触摸事件
+        touchMove: true,
+        // 移动端优化：禁用拖拽预览（避免触摸冲突）
+        dragEnabled: true,
       });
 
       // ===== 轻量 i18n（默认英文，支持中文；localStorage 持久化） =====
@@ -128,11 +416,11 @@
           btn: {
             applyFen: 'Apply FEN',
             reset: 'Start position',
-            toggle: 'Show/Hide overlay (A)',
-            opp: 'Opponent only (O)',
-            mine: 'Mine only (M)',
+            toggle: 'Show/Hide (A)',
+            opp: 'Opponent (O)',
+            mine: 'Mine (M)',
             clear: 'Hide (H)',
-            switchSide: 'Switch my side (White/Black)'
+            switchSide: 'Switch side (W/B)'
           },
           badge: {
             shortcuts: 'Hotkeys: A show/hide (keep last side) / O opponent / M mine / H hide',
@@ -145,7 +433,7 @@
           btn: {
             applyFen: '应用 FEN',
             reset: '起始局面',
-            toggle: '显示/隐藏覆盖层 (A)',
+            toggle: '显示/隐藏 (A)',
             opp: '只看对方 (O)',
             mine: '只看己方 (M)',
             clear: '隐藏 (H)',
@@ -206,6 +494,15 @@
             refreshOverlay();
           });
         }
+      }
+      
+      // 移动端优化：确保棋盘在窗口大小变化时重新计算
+      function handleResize() {
+        // 延迟执行，确保DOM更新完成
+        setTimeout(() => {
+          ensureOverlayAttached();
+          refreshOverlay();
+        }, 100);
       }
       ensureOverlayAttached();
 
@@ -451,9 +748,14 @@
       document.getElementById('lang-zh').onclick = () => applyLocale('zh');
 
       // 处理窗口/容器尺寸变化时的像素重绘
-      const ro = new ResizeObserver(() => refreshOverlay());
+      const ro = new ResizeObserver(() => handleResize());
       ro.observe(document.querySelector('.board-wrap'));
-      window.addEventListener('resize', () => refreshOverlay());
+      window.addEventListener('resize', () => handleResize());
+      
+      // 移动端优化：监听方向变化
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => handleResize(), 500);
+      });
 
       function updateMovable() {
         const verbose = chess.moves({ verbose: true });
