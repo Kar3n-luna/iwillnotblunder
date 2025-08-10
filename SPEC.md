@@ -170,3 +170,64 @@
   - 采用 Vite + TypeScript 开发与构建；源代码位于 `src/`，产物输出到 `dist/`。
   - Cloudflare Pages 使用 `dist/` 作为站点根；本地通过 `wrangler pages dev dist` 预览。
   - 开发命令：`npm run dev`（Vite），`npm run build`（产出 `dist/`）。
+
+## 12. Cloudflare D1 与 OAuth（关键注意事项 + 当前状态）
+
+### 12.1 绑定与环境
+- 绑定名称：`DB`（Pages Functions 通过 `context.env.DB` 访问）。
+- `wrangler.jsonc`：
+  - 默认（preview/dev）：`iwillnotblunder-dev`（ID：`d029e404-914e-44f5-8bad-80721377498c`）。
+  - `env.production`：`iwillnotblunder-prod`（ID：`0609344a-1782-4211-93fe-32f9a5220c04`）。
+- 可选：如需固定本地预览库 ID，可在 `d1_databases` 中加入 `preview_database_id`。
+
+### 12.2 迁移与表
+- 迁移目录：`migrations/`
+  - `0001_init.sql`：初版 `users`、`sessions`（现已不再使用）。
+  - `0002_auth.sql`：当前使用的 `auth_users`、`auth_sessions`。
+- API 使用表：`auth_users`、`auth_sessions`。
+
+### 12.3 当前数据库状态
+- 本地（`wrangler pages dev` 默认本地持久化数据库）：
+  - 已应用 `0002_auth.sql`，存在 `auth_users`、`auth_sessions`。
+  - 历史上存在一个自定义 `users` 表（列结构与 `0001_init` 不同），保留不动以避免破坏。
+- 远端 dev（`iwillnotblunder-dev`）：
+  - 已有 `users`、`sessions`（来自 `0001_init`）。
+  - 尚未应用 `0002_auth.sql`，部署/联调前需执行远端迁移（见 12.5）。
+- 远端 prod（`iwillnotblunder-prod`）：
+  - 尚未应用迁移；首次发布前需远端应用 `0001_init` 与 `0002_auth`。
+
+### 12.4 本地/远端运行要点
+- Wrangler v4 默认本地模式：
+  - 本地迁移：`wrangler d1 migrations apply <DB_NAME>`。
+  - 远端迁移：`wrangler d1 migrations apply <DB_NAME> --remote`。
+  - 本地执行 SQL：`wrangler d1 execute <DB_NAME> --command "SQL"`。
+  - 远端执行 SQL：`wrangler d1 execute <DB_NAME> --remote --command "SQL"`。
+- Pages 本地 dev：
+  - 默认连接本地持久化 D1；如需连接远端 D1，可使用：
+    - `npx wrangler pages dev dist --port 8090 --d1 DB=<DATABASE_ID>`。
+  - 命令行参数优先于配置文件绑定（便于临时连远端）。
+
+### 12.5 一键命令
+- 本地应用迁移：
+  - `npm run db:migrate`（等价 `wrangler d1 migrations apply iwillnotblunder-dev`）。
+- 远端 dev 应用 `0002_auth`：
+  - `wrangler d1 migrations apply iwillnotblunder-dev --remote`。
+- 远端 prod 首次初始化：
+  - `npm run db:migrate:prod`（或 `wrangler d1 migrations apply iwillnotblunder-prod --remote`）。
+
+### 12.6 OAuth（PKCE）
+- 路由：
+  - `GET /api/oauth/login`：生成 `state`/`code_verifier`（HttpOnly `pkce` Cookie，10 分钟），跳转 Lichess。
+  - `GET /api/oauth/callback`：校验 `state`，用 `code_verifier` 换 token；写入 `auth_users`/`auth_sessions`；设置 `session` Cookie。
+  - `GET /api/me`：返回鉴权状态与用户信息。
+  - `GET /api/logout`：删除会话并清理 Cookie。
+- 环境变量：
+  - `LICHESS_CLIENT_ID`（如本地：`iwillnotblunder_dev`）。
+  - `OAUTH_REDIRECT_URI`（本地：`http://localhost:8090/api/oauth/callback`；生产用 Pages 域名）。
+  - `SESSION_SECRET`（随机强密钥）。
+- 本地变量文件：`.dev.vars`（已配置上述三项，供本地 dev 使用）。
+
+### 12.7 常见问题
+- 本地与远端 schema 不一致：
+  - 优先使用独立命名（`auth_*`），避免与历史表冲突。
+  - 明确迁移作用域：本地默认、远端需 `--remote`。必要时通过 `--d1` 让 Pages dev 直连远端做联调。

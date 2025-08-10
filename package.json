@@ -8,7 +8,10 @@
     "preview": "vite preview --port 5173",
     "build": "vite build",
     "pages:dev": "wrangler pages dev dist --port 8090",
-    "pages:deploy": "wrangler pages deploy dist"
+    "pages:deploy": "wrangler pages deploy dist",
+    "db:migrate": "wrangler d1 migrations apply iwillnotblunder-dev",
+    "db:migrate:prod": "wrangler d1 migrations apply iwillnotblunder-prod",
+    "db:console": "wrangler d1 execute iwillnotblunder-dev --command 'SELECT 1'"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

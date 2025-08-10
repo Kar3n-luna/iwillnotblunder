@@ -1,7 +1,27 @@
 {
   "name": "iwillnotblunder",
   "pages_build_output_dir": "dist",
-  "compatibility_date": "2025-08-01"
+  "compatibility_date": "2025-08-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "iwillnotblunder-dev",
+      "database_id": "d029e404-914e-44f5-8bad-80721377498c",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "iwillnotblunder-prod",
+          "database_id": "0609344a-1782-4211-93fe-32f9a5220c04",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
 }
 
 
