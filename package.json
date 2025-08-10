@@ -17,5 +17,9 @@
     "typescript": "^5.6.3",
     "vite": "^5.4.8",
     "wrangler": "^4.28.1"
+  },
+  "dependencies": {
+    "@lichess-org/chessground": "^9.1.0",
+    "chess.js": "^1.4.0"
   }
 }
